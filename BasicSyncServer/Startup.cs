@@ -47,6 +47,16 @@ namespace BasicSyncServer
 
             app.UseHttpsRedirection();
             app.UseMvc();
+            MigrateOnStartup(app, env);
+        }
+
+        public void MigrateOnStartup(IApplicationBuilder app, IHostingEnvironment env)
+        {
+            using (var serviceScope = app.ApplicationServices.GetRequiredService<IServiceScopeFactory>().CreateScope())
+            {
+                var context = serviceScope.ServiceProvider.GetService<BasicSyncServerContext>();
+                context.Database.Migrate();
+            }
         }
     }
 }
