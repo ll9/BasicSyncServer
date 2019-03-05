@@ -47,17 +47,12 @@ namespace BasicSyncServer.Controllers
         }
 
         // PUT: api/BasicEntities/5
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutBasicEntity([FromRoute] string id, [FromBody] BasicEntity basicEntity)
+        [HttpPut]
+        public async Task<IActionResult> PutBasicEntity([FromBody] BasicEntity basicEntity)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
-            }
-
-            if (id != basicEntity.Id)
-            {
-                return BadRequest();
             }
 
             basicEntity.RowVersion = GetNewMaxRowVersion();
@@ -69,17 +64,10 @@ namespace BasicSyncServer.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!BasicEntityExists(id))
-                {
-                    return NotFound();
-                }
-                else
-                {
-                    throw;
-                }
+                throw;
             }
 
-            return NoContent();
+            return CreatedAtAction("GetBasicEntity", new { id = basicEntity.Id }, basicEntity);
         }
 
         // POST: api/BasicEntities
