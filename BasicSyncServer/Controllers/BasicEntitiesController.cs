@@ -71,20 +71,33 @@ namespace BasicSyncServer.Controllers
         }
 
         // POST: api/BasicEntities
-        [HttpPost]
-        public async Task<IActionResult> PostBasicEntity([FromBody] BasicEntity basicEntity)
+        [HttpPost("{maxSync}")]
+        public async Task<IActionResult> PostBasicEntity([FromRoute] int maxSync, [FromBody] ICollection<BasicEntity> basicEntities)
         {
             if (!ModelState.IsValid)
             {
                 return BadRequest(ModelState);
             }
-            int maxRowVersion = GetNewMaxRowVersion();
+            int newRowVersion = GetNewMaxRowVersion() + 1;
 
-            basicEntity.RowVersion = maxRowVersion;
-            _context.BasicEntity.Add(basicEntity);
+            foreach (var basicEntity in basicEntities)
+            {
+                basicEntity.RowVersion = newRowVersion;
+
+                if (_context.BasicEntity.Any(e => e.Id == basicEntity.Id))
+                {
+                    _context.Entry(basicEntity).State = EntityState.Modified;
+                }
+                else
+                {
+                    await _context.BasicEntity.AddAsync(basicEntity);
+                }
+            }
+
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetBasicEntity", new { id = basicEntity.Id }, basicEntity);
+            var changes = _context.BasicEntity.Where(e => e.RowVersion > maxSync);
+            return Ok(changes);
         }
 
         private int GetNewMaxRowVersion()
@@ -92,7 +105,7 @@ namespace BasicSyncServer.Controllers
             return _context.BasicEntity
                 .Select(b => b.RowVersion)
                 .DefaultIfEmpty(0)
-                .Max() + 1;
+                .Max();
         }
 
         // DELETE: api/BasicEntities/5
